@@ -15,11 +15,18 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
 import com.bikerbuddy.hud.location.SpeedManager
+import com.bikerbuddy.hud.call.CallManager
+import com.bikerbuddy.hud.media.MediaManager
+
 
 
 class MainActivity : ComponentActivity() {
 
     lateinit var speedManager: SpeedManager
+    lateinit var callManager: CallManager
+    lateinit var mediaManager: MediaManager
+
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,12 +44,19 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun HudScreen(speedManager: SpeedManager) {
+fun HudScreen(
+    speedManager: SpeedManager,
+    callManager: CallManager,
+    mediaManager: MediaManager
+) {
 
     val speed by speedManager.speedKmh.collectAsState()
+    val callState by callManager.callState.collectAsState()
+    val mediaState by mediaManager.mediaState.collectAsState()
 
     LaunchedEffect(Unit) {
         speedManager.start()
+        callManager.start()
     }
 
     Box(
@@ -50,7 +64,8 @@ fun HudScreen(speedManager: SpeedManager) {
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Speed (top center)
+
+        // SPEED (top)
         Text(
             text = "$speed km/h",
             color = Color.White,
@@ -60,14 +75,88 @@ fun HudScreen(speedManager: SpeedManager) {
                 .padding(top = 24.dp)
         )
 
-        // Placeholder HUD label
-        Text(
-            text = "BIKER HUD",
-            color = Color.Gray,
-            fontSize = 24.sp,
-            modifier = Modifier.align(Alignment.Center)
-        )
+        // MUSIC CONTROLS (center)
+        Row(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalArrangement = Arrangement.spacedBy(32.dp)
+        ) {
+            Text(
+                text = "⏮",
+                color = Color.White,
+                fontSize = 36.sp,
+                modifier = Modifier.clickable {
+                    mediaManager.previous()
+                }
+            )
+
+            Text(
+                text = if (mediaState.isPlaying) "⏸" else "▶",
+                color = Color.White,
+                fontSize = 36.sp,
+                modifier = Modifier.clickable {
+                    mediaManager.playPause()
+                }
+            )
+
+            Text(
+                text = "⏭",
+                color = Color.White,
+                fontSize = 36.sp,
+                modifier = Modifier.clickable {
+                    mediaManager.next()
+                }
+            )
+        }
+
+        // CALL ALERT (bottom)
+        when (callState) {
+            is CallState.Ringing -> {
+                Text(
+                    text = "INCOMING CALL",
+                    color = Color.Green,
+                    fontSize = 28.sp,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 32.dp)
+                )
+            }
+
+            is CallState.Active -> {
+                Text(
+                    text = "ON CALL",
+                    color = Color.Cyan,
+                    fontSize = 24.sp,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 32.dp)
+                )
+            }
+
+            CallState.Idle -> {}
+        }
     }
+}
+
+
+
+callManager = CallManager(this)
+
+setContent {
+    HudScreen(
+        speedManager = speedManager,
+        callManager = callManager
+    )
+}
+
+
+mediaManager = MediaManager(this)
+
+setContent {
+    HudScreen(
+        speedManager = speedManager,
+        callManager = callManager,
+        mediaManager = mediaManager
+    )
 }
 
 
